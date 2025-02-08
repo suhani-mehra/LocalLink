@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardContent } from './components/ui/Card';
+ // Removed CardTitle
 import { MapPin, Users, Wrench, Calendar, Bell, Store } from 'lucide-react';
 
 const LocalCircle = () => {
