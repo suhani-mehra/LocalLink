@@ -9,7 +9,7 @@ import LocalCircle from './LocalCircle';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#dbf0ff',
+      main: '#6fa8dc',
     },
     background: {
       default: '#444444',
@@ -36,16 +36,23 @@ function App() {
       <CssBaseline />
       <Router>
         <Routes>
-          <Route path="/signup" element={<SignUp />} />
+          <Route
+            path="/"
+            element={<LocalCircle />}
+          />
+          <Route
+            path="/signup"
+            element={<SignUp />}
+          />
+          {/* Redirect unauthenticated users trying to access restricted paths */}
           <Route
             path="/app"
             element={
-              <ProtectedRoute>
-                <LocalCircle />
-              </ProtectedRoute>
+              isAuthenticated() ? <LocalCircle /> : <Navigate to="/" replace />
             }
           />
-          <Route path="/" element={<Navigate to="/signup" replace />} />
+          {/* Catch-all route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </ThemeProvider>

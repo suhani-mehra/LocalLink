@@ -39,6 +39,10 @@ import {
   Close,
   Send
 } from '@mui/icons-material';
+import { auth, googleProvider, db } from './Backend'; 
+import { signInWithPopup, signOut } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 
 // Chat Dialog Component
 const ChatDialog = ({ open, handleClose, neighbor }) => {
@@ -175,6 +179,15 @@ const LocalCircle = () => {
   const [businesses, setBusinesses] = useState([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [selectedNeighbor, setSelectedNeighbor] = useState(null);
+  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
 
   const handleChatOpen = (neighbor) => {
     setSelectedNeighbor(neighbor);
@@ -185,7 +198,45 @@ const LocalCircle = () => {
     setChatOpen(false);
     setSelectedNeighbor(null);
   };
-
+  const handleGoogleSignIn = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const signedInUser = result.user;
+      
+      // Check if user exists in the database
+      const userRef = doc(db, 'users', signedInUser.email);
+      const userSnapshot = await getDoc(userRef);
+  
+      if (userSnapshot.exists()) {
+        // User exists, proceed to app
+        const userData = userSnapshot.data();
+        localStorage.setItem('user', JSON.stringify(userData)); // Save user info locally
+        setUser({
+          name: userData.firstName + ' ' + userData.lastName,
+          email: signedInUser.email,
+          photo: signedInUser.photoURL,
+        });
+        setActiveTab('community'); // Redirect to community tab
+      } else {
+        // User does not exist, redirect to signup
+        alert('No profile found for this account. Please create a profile.');
+        navigate('/signup'); // Use navigate to redirect
+      }
+    } catch (error) {
+      console.error('Error during Google sign-in:', error);
+    }
+  };
+  
+  
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null); // Clear the user state
+      console.log('User signed out');
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
+  };
   // Mock data
   const mockNeighbors = [
     { id: 1, name: 'Sarah Chen', distance: '0.3 miles', skills: ['Gardening', 'Piano Teaching'] },
@@ -312,240 +363,271 @@ const LocalCircle = () => {
 
   return (
     <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh', py: 4 }}>
-      <Container maxWidth="lg">
-        {/* Location Alert */}
-        {!userLocation && (
-          <Alert 
-            severity="info" 
-            action={
-              <Button color="inherit" size="small" onClick={verifyLocation}>
-                Enable Location
-              </Button>
-            }
-            sx={{ mb: 4 }}
-          >
-            Please enable location services to connect with your community
-          </Alert>
-        )}
-
-        {/* Navigation Tabs */}
-        <Paper sx={{ mb: 4 }}>
-          <Tabs
-            value={activeTab}
-            onChange={handleTabChange}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{ borderBottom: 1, borderColor: 'divider' }}
-          >
-            <Tab icon={<Person />} label="Neighbors" value="community" />
-            <Tab icon={<Store />} label="Marketplace" value="marketplace" />
-            <Tab icon={<Event />} label="Events" value="events" />
-            <Tab 
-              icon={
-                <Badge badgeContent={alerts.length} color="error">
-                  <Notifications />
-                </Badge>
-              } 
-              label="Alerts" 
-              value="alerts" 
-            />
-            <Tab icon={<BusinessCenter />} label="Local Business" value="businesses" />
-          </Tabs>
-        </Paper>
-
-        {/* Main Content */}
-        <Grid container spacing={3}>
-          {/* Neighbors Section */}
-          {activeTab === 'community' && neighbors.map((neighbor) => (
-            <Grid item xs={12} sm={6} md={4} key={neighbor.id}>
-              <Card elevation={2}>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    {neighbor.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <LocationOn fontSize="small" sx={{ mr: 1 }} />
-                    {neighbor.distance}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Skills:
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {neighbor.skills.map((skill) => (
-                      <Chip key={skill} label={skill} size="small" />
-                    ))}
-                  </Box>
-                </CardContent>
-                <CardActions>
-                  <Button 
-                    variant="contained" 
-                    fullWidth
-                    onClick={() => handleChatOpen(neighbor)}
-                  >
-                    Connect
+      {!user ? (
+        <Box sx={{ textAlign: 'center', mt: 4 }}>
+          <Typography variant="h5" gutterBottom>
+            Welcome to LocalCircle!
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+            Please log in or create a profile to get started.
+          </Typography>
+          <Button variant="contained" onClick={handleGoogleSignIn} sx={{ mr: 2 }}>
+            Login with Google
+          </Button>
+          <Button variant="outlined" onClick={() => navigate('/signup')}>
+            Create Profile
+          </Button>
+        </Box>
+      ) : (
+        <Container maxWidth="lg">
+          {/* Location Alert */}
+          {!userLocation && (
+            <Alert
+              severity="info"
+              action={
+                <Button color="inherit" size="small" onClick={verifyLocation}>
+                  Enable Location
+                </Button>
+              }
+              sx={{ mb: 4 }}
+            >
+              Please enable location services to connect with your community
+            </Alert>
+          )}
+  
+          {/* Navigation Tabs */}
+          <Paper sx={{ mb: 4 }}>
+            <Tabs
+              value={activeTab}
+              onChange={handleTabChange}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{ borderBottom: 1, borderColor: 'divider' }}
+            >
+              <Tab icon={<Person />} label="Neighbors" value="community" />
+              <Tab icon={<Store />} label="Marketplace" value="marketplace" />
+              <Tab icon={<Event />} label="Events" value="events" />
+              <Tab
+                icon={
+                  <Badge badgeContent={alerts.length} color="error">
+                    <Notifications />
+                  </Badge>
+                }
+                label="Alerts"
+                value="alerts"
+              />
+              <Tab icon={<BusinessCenter />} label="Local Business" value="businesses" />
+              <Box sx={{ flexGrow: 1 }} /> {/* Push Login/Logout to the right */}
+              {user ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
+                  <Avatar src={user.photo} alt={user.name} />
+                  <Typography>{user.name}</Typography>
+                  <Button variant="contained" onClick={handleLogout}>
+                    Logout
                   </Button>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-
-          {/* Marketplace Section */}
-          {activeTab === 'marketplace' && marketplace.map((item) => (
-            <Grid item xs={12} sm={6} md={4} key={item.id}>
-              <Card elevation={2}>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    {item.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Offered by {item.owner}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <LocationOn fontSize="small" sx={{ mr: 1 }} />
-                    {item.distance}
-                  </Typography>
-                  <Chip 
-                    label={item.rate}
-                    color="success"
-                    variant="outlined"
-                  />
-                </CardContent>
-                <CardActions>
-                  <Button variant="contained" fullWidth>
-                    Request {item.type === 'skill' ? 'Service' : 'Item'}
-                  </Button>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-
-          {/* Events Section */}
-          {activeTab === 'events' && events.map((event) => (
-            <Grid item xs={12} sm={6} md={4} key={event.id}>
-              <Card elevation={2}>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    {event.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    {event.date}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <LocationOn fontSize="small" sx={{ mr: 1 }} />
-                    {event.location}
-                  </Typography>
-                  <Chip 
-                    label={`${event.attendees} attending`}
-                    color="primary"
-                    variant="outlined"
-                  />
-                </CardContent>
-                <CardActions>
-                  <Button variant="contained" fullWidth>
-                    Join Event
-                  </Button>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-
-          {/* Alerts Section */}
-          {activeTab === 'alerts' && alerts.map((alert) => (
-            <Grid item xs={12} sm={6} md={4} key={alert.id}>
-              <Card elevation={2}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    {getSeverityIcon(alert.severity)}
-                    <Typography variant="h6" sx={{ ml: 1 }}>
-                      {alert.title}
+                </Box>
+              ) : (
+                <Button variant="outlined" onClick={handleGoogleSignIn}>
+                  Login with Google
+                </Button>
+              )}
+            </Tabs>
+          </Paper>
+  
+          {/* Main Content */}
+          <Grid container spacing={3}>
+            {/* Neighbors Section */}
+            {activeTab === 'community' && neighbors.map((neighbor) => (
+              <Grid item xs={12} sm={6} md={4} key={neighbor.id}>
+                <Card elevation={2}>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      {neighbor.name}
                     </Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    {alert.message}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
-                    {alert.timestamp}
-                  </Typography>
-                </CardContent>
-                <CardActions>
-                  <Button 
-                    variant="contained" 
-                    fullWidth 
-                    color={alert.severity}
-                  >
-                    View Details
-                  </Button>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-
-          {/* Local Businesses Section */}
-          {activeTab === 'businesses' && businesses.map((business) => (
-            <Grid item xs={12} sm={6} md={4} key={business.id}>
-              <Card elevation={2}>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    {business.name}
-                  </Typography>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Chip 
-                      label={business.type}
-                      size="small"
-                      sx={{ mr: 1 }}
+                    <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <LocationOn fontSize="small" sx={{ mr: 1 }} />
+                      {neighbor.distance}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Skills:
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {neighbor.skills.map((skill) => (
+                        <Chip key={skill} label={skill} size="small" />
+                      ))}
+                    </Box>
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      onClick={() => handleChatOpen(neighbor)}
+                    >
+                      Connect
+                    </Button>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+  
+            {/* Marketplace Section */}
+            {activeTab === 'marketplace' && marketplace.map((item) => (
+              <Grid item xs={12} sm={6} md={4} key={item.id}>
+                <Card elevation={2}>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      {item.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Offered by {item.owner}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <LocationOn fontSize="small" sx={{ mr: 1 }} />
+                      {item.distance}
+                    </Typography>
+                    <Chip
+                      label={item.rate}
+                      color="success"
+                      variant="outlined"
                     />
-                    <Chip 
-                      icon={<Star />}
-                      label={business.rating}
-                      size="small"
+                  </CardContent>
+                  <CardActions>
+                    <Button variant="contained" fullWidth>
+                      Request {item.type === 'skill' ? 'Service' : 'Item'}
+                    </Button>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+  
+            {/* Events Section */}
+            {activeTab === 'events' && events.map((event) => (
+              <Grid item xs={12} sm={6} md={4} key={event.id}>
+                <Card elevation={2}>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      {event.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      {event.date}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <LocationOn fontSize="small" sx={{ mr: 1 }} />
+                      {event.location}
+                    </Typography>
+                    <Chip
+                      label={`${event.attendees} attending`}
                       color="primary"
+                      variant="outlined"
                     />
-                  </Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', my: 1 }}>
-                    <LocationOn fontSize="small" sx={{ mr: 1 }} />
-                    {business.distance} - {business.address}
-                  </Typography>
-                  <Box sx={{ mt: 2 }}>
-                    <Chip 
-                      label={business.isOpen ? 'Open Now' : 'Closed'}
-                      color={business.isOpen ? 'success' : 'default'}
+                  </CardContent>
+                  <CardActions>
+                    <Button variant="contained" fullWidth>
+                      Join Event
+                    </Button>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+  
+            {/* Alerts Section */}
+            {activeTab === 'alerts' && alerts.map((alert) => (
+              <Grid item xs={12} sm={6} md={4} key={alert.id}>
+                <Card elevation={2}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      {getSeverityIcon(alert.severity)}
+                      <Typography variant="h6" sx={{ ml: 1 }}>
+                        {alert.title}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      {alert.message}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+                      {alert.timestamp}
+                    </Typography>
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      color={alert.severity}
+                    >
+                      View Details
+                    </Button>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+  
+            {/* Local Businesses Section */}
+            {activeTab === 'businesses' && businesses.map((business) => (
+              <Grid item xs={12} sm={6} md={4} key={business.id}>
+                <Card elevation={2}>
+                  <CardContent>
+                    <Typography variant="h6" gutterBottom>
+                      {business.name}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <Chip
+                        label={business.type}
+                        size="small"
+                        sx={{ mr: 1 }}
+                      />
+                      <Chip
+                        icon={<Star />}
+                        label={business.rating}
+                        size="small"
+                        color="primary"
+                      />
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', my: 1 }}>
+                      <LocationOn fontSize="small" sx={{ mr: 1 }} />
+                      {business.distance} - {business.address}
+                    </Typography>
+                    <Box sx={{ mt: 2 }}>
+                      <Chip
+                        label={business.isOpen ? 'Open Now' : 'Closed'}
+                        color={business.isOpen ? 'success' : 'default'}
+                        size="small"
+                        sx={{ mr: 1 }}
+                      />
+                    </Box>
+                  </CardContent>
+                  <CardActions sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Button
+                      startIcon={<Phone />}
                       size="small"
-                      sx={{ mr: 1 }}
-                    />
-                  </Box>
-                </CardContent>
-                <CardActions sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Button 
-                    startIcon={<Phone />}
-                    size="small"
-                  >
-                    Call
-                  </Button>
-                  <Button 
-                    startIcon={<Language />}
-                    size="small"
-                  >
-                    Website
-                  </Button>
-                  <Button 
-                    variant="contained"
-                    size="small"
-                  >
-                    Directions
-                  </Button>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-
-        {/* Chat Dialog */}
-        <ChatDialog 
-          open={chatOpen}
-          handleClose={handleChatClose}
-          neighbor={selectedNeighbor}
-        />
-      </Container>
+                    >
+                      Call
+                    </Button>
+                    <Button
+                      startIcon={<Language />}
+                      size="small"
+                    >
+                      Website
+                    </Button>
+                    <Button
+                      variant="contained"
+                      size="small"
+                    >
+                      Directions
+                    </Button>
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+  
+          {/* Chat Dialog */}
+          <ChatDialog
+            open={chatOpen}
+            handleClose={handleChatClose}
+            neighbor={selectedNeighbor}
+          />
+        </Container>
+      )}
     </Box>
   );
 };

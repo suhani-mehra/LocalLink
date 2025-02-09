@@ -20,7 +20,7 @@ import {
 } from '@mui/material';
 import { CloudUpload, PhotoCamera } from '@mui/icons-material';
 import { db } from './Backend'; // Import your Firestore instance
-import { setDoc, doc } from 'firebase/firestore';
+import { setDoc,getDoc, doc } from 'firebase/firestore';
 const SignUp = () => {
   const navigate = useNavigate();
   const [activeStep, setActiveStep] = useState(0);
@@ -120,28 +120,34 @@ const SignUp = () => {
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      const userId = formData.email; // Use email as a unique identifier for each user
+      const userId = formData.email;
   
-      // Prepare the user data to store in Firestore
+      // Check if the email already exists
+      const userRef = doc(db, 'users', userId);
+      const userSnapshot = await getDoc(userRef);
+  
+      if (userSnapshot.exists()) {
+        alert('An account with this email already exists. Please log in.');
+        navigate('/');
+        return;
+      }
+  
+      // Save new user to Firestore
       const userData = {
         ...formData,
         profilePicture,
         idDocument,
-        createdAt: new Date().toISOString() // Timestamp for when the data was created
+        createdAt: new Date().toISOString(),
       };
   
-      // Save data to Firestore
-      await setDoc(doc(db, 'users', userId), userData);
+      await setDoc(userRef, userData);
+      console.log('User profile created successfully:', userData);
   
-      // Save user information in localStorage for authentication
-      localStorage.setItem('user', JSON.stringify({ email: formData.email }));
-  
-      console.log('User profile saved successfully:', userData);
-  
-      // Navigate to the main app or success page
+      // Automatically log in the user after signup
+      localStorage.setItem('user', JSON.stringify(userData));
       navigate('/app');
     } catch (err) {
-      console.error('Error saving user profile:', err);
+      console.error('Error creating profile:', err);
       setError('Failed to create profile. Please try again.');
     } finally {
       setLoading(false);
