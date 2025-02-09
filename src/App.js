@@ -1,14 +1,27 @@
-   // src/App.js
+import React from 'react';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import LocalCircle from './LocalCircle';
 
-   import React from 'react';
-   import LocalCircle from './LocalCircle'; // Adjust the path if necessary
+// Create a theme instance
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#1976d2',
+    },
+    background: {
+      default: '#f5f5f5',
+    },
+  },
+});
 
-   function App() {
-     return (
-       <div className="App">
-         <LocalCircle />
-       </div>
-     );
-   }
+function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <LocalCircle />
+    </ThemeProvider>
+  );
+}
 
-   export default App;
+export default App;

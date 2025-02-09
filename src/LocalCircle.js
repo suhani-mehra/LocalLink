@@ -1,7 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent } from './components/ui/Card';
- // Removed CardTitle
-import { MapPin, Users, Wrench, Calendar, Bell, Store } from 'lucide-react';
+import {
+  Container,
+  Paper,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  CardActions,
+  Grid,
+  Tabs,
+  Tab,
+  Box,
+  Alert,
+  Chip,
+  IconButton,
+  Badge
+} from '@mui/material';
+import {
+  Person,
+  Store,
+  Event,
+  Notifications,
+  LocationOn,
+  BusinessCenter,
+  Phone,
+  Language,
+  Star,
+  Warning,
+  Info,
+  ErrorOutline
+} from '@mui/icons-material';
 
 const LocalCircle = () => {
   const [activeTab, setActiveTab] = useState('community');
@@ -10,8 +38,92 @@ const LocalCircle = () => {
   const [marketplace, setMarketplace] = useState([]);
   const [events, setEvents] = useState([]);
   const [alerts, setAlerts] = useState([]);
+  const [businesses, setBusinesses] = useState([]);
 
-  // Mock location verification
+  // Mock data setup
+  const mockAlerts = [
+    { 
+      id: 1, 
+      type: 'urgent', 
+      title: 'Water Main Break',
+      message: 'Water service disruption on Oak Street. Repairs underway.',
+      timestamp: '2 hours ago',
+      severity: 'error'
+    },
+    { 
+      id: 2, 
+      type: 'community', 
+      title: 'Community Meeting',
+      message: 'Monthly town hall scheduled for next Wednesday at 7 PM',
+      timestamp: '1 day ago',
+      severity: 'info'
+    },
+    { 
+      id: 3, 
+      type: 'weather', 
+      title: 'Weather Alert',
+      message: 'Heavy rain expected this weekend. Please secure outdoor items.',
+      timestamp: '3 hours ago',
+      severity: 'warning'
+    }
+  ];
+
+  const mockBusinesses = [
+    {
+      id: 1,
+      name: "Joe's Coffee Shop",
+      type: 'Café',
+      rating: 4.5,
+      distance: '0.2 miles',
+      address: '123 Main St',
+      phone: '(555) 123-4567',
+      website: 'www.joescoffee.com',
+      isOpen: true
+    },
+    {
+      id: 2,
+      name: 'Fresh Market',
+      type: 'Grocery Store',
+      rating: 4.2,
+      distance: '0.4 miles',
+      address: '456 Oak Ave',
+      phone: '(555) 234-5678',
+      website: 'www.freshmarket.com',
+      isOpen: true
+    },
+    {
+      id: 3,
+      name: 'City Books',
+      type: 'Bookstore',
+      rating: 4.8,
+      distance: '0.6 miles',
+      address: '789 Elm St',
+      phone: '(555) 345-6789',
+      website: 'www.citybooks.com',
+      isOpen: false
+    }
+  ];
+
+  // Your existing mock data...
+  const mockNeighbors = [
+    { id: 1, name: 'Sarah Chen', distance: '0.3 miles', skills: ['Gardening', 'Piano Teaching'] },
+    { id: 2, name: 'Mike Johnson', distance: '0.5 miles', skills: ['Home Repair', 'Programming'] },
+    { id: 3, name: 'Lisa Wong', distance: '0.8 miles', skills: ['Cooking', 'Painting'] },
+  ];
+
+  const mockMarketplace = [
+    { id: 1, type: 'tool', name: 'Power Drill', owner: 'James', distance: '0.2 miles', rate: 'Free' },
+    { id: 2, type: 'skill', name: 'Math Tutoring', owner: 'Emma', distance: '0.4 miles', rate: '$20/hr' },
+    { id: 3, type: 'item', name: 'Camping Tent', owner: 'David', distance: '0.6 miles', rate: '$10/day' },
+  ];
+
+  const mockEvents = [
+    { id: 1, name: 'Community Garden Day', date: '2024-02-15', location: 'Central Park', attendees: 12 },
+    { id: 2, name: 'Block Party', date: '2024-02-20', location: 'Main Street', attendees: 45 },
+    { id: 3, name: 'Skill Share Workshop', date: '2024-02-25', location: 'Community Center', attendees: 8 },
+  ];
+
+  // Location verification
   const verifyLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -28,154 +140,255 @@ const LocalCircle = () => {
     }
   };
 
-  // Mock nearby neighbors data
-  const mockNeighbors = [
-    { id: 1, name: 'Sarah Chen', distance: '0.3 miles', skills: ['Gardening', 'Piano Teaching'] },
-    { id: 2, name: 'Mike Johnson', distance: '0.5 miles', skills: ['Home Repair', 'Programming'] },
-    { id: 3, name: 'Lisa Wong', distance: '0.8 miles', skills: ['Cooking', 'Painting'] },
-  ];
-
-  // Mock marketplace items
-  const mockMarketplace = [
-    { id: 1, type: 'tool', name: 'Power Drill', owner: 'James', distance: '0.2 miles', rate: 'Free' },
-    { id: 2, type: 'skill', name: 'Math Tutoring', owner: 'Emma', distance: '0.4 miles', rate: '$20/hr' },
-    { id: 3, type: 'item', name: 'Camping Tent', owner: 'David', distance: '0.6 miles', rate: '$10/day' },
-  ];
-
-  // Mock community events
-  const mockEvents = [
-    { id: 1, name: 'Community Garden Day', date: '2024-02-15', location: 'Central Park', attendees: 12 },
-    { id: 2, name: 'Block Party', date: '2024-02-20', location: 'Main Street', attendees: 45 },
-    { id: 3, name: 'Skill Share Workshop', date: '2024-02-25', location: 'Community Center', attendees: 8 },
-  ];
-
   useEffect(() => {
     verifyLocation();
     setNeighbors(mockNeighbors);
     setMarketplace(mockMarketplace);
     setEvents(mockEvents);
+    setAlerts(mockAlerts);
+    setBusinesses(mockBusinesses);
   }, []);
 
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  const getSeverityIcon = (severity) => {
+    switch (severity) {
+      case 'error':
+        return <ErrorOutline color="error" />;
+      case 'warning':
+        return <Warning color="warning" />;
+      case 'info':
+        return <Info color="info" />;
+      default:
+        return <Info />;
+    }
+  };
+
   return (
-    <div className="max-w-6xl mx-auto p-4">
-      {/* Location Verification Banner */}
-      {!userLocation && (
-        <div className="bg-yellow-100 p-4 rounded-lg mb-6">
-          <p className="text-yellow-800">Please enable location services to connect with your community.</p>
-          <button
-            onClick={verifyLocation}
-            className="mt-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
+    <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh', py: 4 }}>
+      <Container maxWidth="lg">
+        {/* Location Alert */}
+        {!userLocation && (
+          <Alert 
+            severity="info" 
+            action={
+              <Button color="inherit" size="small" onClick={verifyLocation}>
+                Enable Location
+              </Button>
+            }
+            sx={{ mb: 4 }}
           >
-            Enable Location
-          </button>
-        </div>
-      )}
+            Please enable location services to connect with your community
+          </Alert>
+        )}
 
-      {/* Navigation Tabs */}
-      <div className="flex gap-4 mb-6 overflow-x-auto">
-        {[
-          { id: 'community', icon: Users, label: 'Neighbors' },
-          { id: 'marketplace', icon: Wrench, label: 'Marketplace' },
-          { id: 'events', icon: Calendar, label: 'Events' },
-          { id: 'alerts', icon: Bell, label: 'Alerts' },
-          { id: 'businesses', icon: Store, label: 'Local Business' },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-              activeTab === tab.id
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 hover:bg-gray-200'
-            }`}
+        {/* Navigation Tabs */}
+        <Paper sx={{ mb: 4 }}>
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{ borderBottom: 1, borderColor: 'divider' }}
           >
-            <tab.icon className="h-5 w-5" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+            <Tab icon={<Person />} label="Neighbors" value="community" />
+            <Tab icon={<Store />} label="Marketplace" value="marketplace" />
+            <Tab icon={<Event />} label="Events" value="events" />
+            <Tab 
+              icon={
+                <Badge badgeContent={alerts.length} color="error">
+                  <Notifications />
+                </Badge>
+              } 
+              label="Alerts" 
+              value="alerts" 
+            />
+            <Tab icon={<BusinessCenter />} label="Local Business" value="businesses" />
+          </Tabs>
+        </Paper>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Neighbors Section */}
-        {activeTab === 'community' && neighbors.map(neighbor => (
-          <Card key={neighbor.id}>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold">{neighbor.name}</h3>
-                  <p className="text-sm text-gray-500 flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
+        {/* Main Content */}
+        <Grid container spacing={3}>
+          {/* Existing sections... */}
+          {/* Neighbors Section */}
+          {activeTab === 'community' && neighbors.map((neighbor) => (
+            <Grid item xs={12} sm={6} md={4} key={neighbor.id}>
+              <Card elevation={2}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {neighbor.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <LocationOn fontSize="small" sx={{ mr: 1 }} />
                     {neighbor.distance}
-                  </p>
-                </div>
-                <button className="px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-sm">
-                  Connect
-                </button>
-              </div>
-              <div className="mt-3">
-                <p className="text-sm text-gray-600">Skills:</p>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {neighbor.skills.map(skill => (
-                    <span key={skill} className="px-2 py-1 bg-gray-100 rounded-full text-sm">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Skills:
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {neighbor.skills.map((skill) => (
+                      <Chip key={skill} label={skill} size="small" />
+                    ))}
+                  </Box>
+                </CardContent>
+                <CardActions>
+                  <Button variant="contained" fullWidth>
+                    Connect
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
 
-        {/* Marketplace Section */}
-        {activeTab === 'marketplace' && marketplace.map(item => (
-          <Card key={item.id}>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold">{item.name}</h3>
-                  <p className="text-sm text-gray-500">Offered by {item.owner}</p>
-                  <p className="text-sm text-gray-500 flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
+          {/* Marketplace Section */}
+          {activeTab === 'marketplace' && marketplace.map((item) => (
+            <Grid item xs={12} sm={6} md={4} key={item.id}>
+              <Card elevation={2}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {item.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Offered by {item.owner}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <LocationOn fontSize="small" sx={{ mr: 1 }} />
                     {item.distance}
-                  </p>
-                </div>
-                <span className="px-3 py-1 bg-green-100 text-green-600 rounded-full text-sm">
-                  {item.rate}
-                </span>
-              </div>
-              <button className="mt-3 w-full py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-                Request {item.type === 'skill' ? 'Service' : 'Item'}
-              </button>
-            </CardContent>
-          </Card>
-        ))}
+                  </Typography>
+                  <Chip 
+                    label={item.rate}
+                    color="success"
+                    variant="outlined"
+                  />
+                </CardContent>
+                <CardActions>
+                  <Button variant="contained" fullWidth>
+                    Request {item.type === 'skill' ? 'Service' : 'Item'}
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
 
-        {/* Events Section */}
-        {activeTab === 'events' && events.map(event => (
-          <Card key={event.id}>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold">{event.name}</h3>
-                  <p className="text-sm text-gray-500">{event.date}</p>
-                  <p className="text-sm text-gray-500 flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
+          {/* Events Section */}
+          {activeTab === 'events' && events.map((event) => (
+            <Grid item xs={12} sm={6} md={4} key={event.id}>
+              <Card elevation={2}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {event.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    {event.date}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <LocationOn fontSize="small" sx={{ mr: 1 }} />
                     {event.location}
-                  </p>
-                </div>
-                <span className="px-3 py-1 bg-purple-100 text-purple-600 rounded-full text-sm">
-                  {event.attendees} attending
-                </span>
-              </div>
-              <button className="mt-3 w-full py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-                Join Event
-              </button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
+                  </Typography>
+                  <Chip 
+                    label={`${event.attendees} attending`}
+                    color="primary"
+                    variant="outlined"
+                  />
+                </CardContent>
+                <CardActions>
+                  <Button variant="contained" fullWidth>
+                    Join Event
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+
+          {/* Alerts Section */}
+          {activeTab === 'alerts' && alerts.map((alert) => (
+            <Grid item xs={12} sm={6} md={4} key={alert.id}>
+              <Card elevation={2}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    {getSeverityIcon(alert.severity)}
+                    <Typography variant="h6" sx={{ ml: 1 }}>
+                      {alert.title}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    {alert.message}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>
+                    {alert.timestamp}
+                  </Typography>
+                </CardContent>
+                <CardActions>
+                  <Button variant="contained" fullWidth color={alert.severity}>
+                    View Details
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+
+          {/* Local Businesses Section */}
+          {activeTab === 'businesses' && businesses.map((business) => (
+            <Grid item xs={12} sm={6} md={4} key={business.id}>
+              <Card elevation={2}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    {business.name}
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Chip 
+                      label={business.type}
+                      size="small"
+                      sx={{ mr: 1 }}
+                    />
+                    <Chip 
+                      icon={<Star />}
+                      label={business.rating}
+                      size="small"
+                      color="primary"
+                    />
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', my: 1 }}>
+                    <LocationOn fontSize="small" sx={{ mr: 1 }} />
+                    {business.distance} - {business.address}
+                  </Typography>
+                  <Box sx={{ mt: 2 }}>
+                    <Chip 
+                      label={business.isOpen ? 'Open Now' : 'Closed'}
+                      color={business.isOpen ? 'success' : 'default'}
+                      size="small"
+                      sx={{ mr: 1 }}
+                    />
+                  </Box>
+                </CardContent>
+                <CardActions sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Button 
+                    startIcon={<Phone />}
+                    size="small"
+                  >
+                    Call
+                  </Button>
+                  <Button 
+                    startIcon={<Language />}
+                    size="small"
+                  >
+                    Website
+                  </Button>
+                  <Button 
+                    variant="contained"
+                    size="small"
+                  >
+                    Directions
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+    </Box>
   );
 };
 
