@@ -13,11 +13,15 @@ import {
   Box,
   Alert,
   Chip,
-  IconButton,
-  Badge,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   TextField,
-  Menu,
-  MenuItem,
+  IconButton,
+  Avatar,
+  InputAdornment,
+  Badge
 } from '@mui/material';
 import {
   Person,
@@ -31,12 +35,136 @@ import {
   Star,
   Warning,
   Info,
-  ErrorOutline
+  ErrorOutline,
+  Close,
+  Send
 } from '@mui/icons-material';
-import { auth, googleProvider } from './firebase'; // Adjust the path to your firebase.js file
-import { signInWithPopup, signOut } from 'firebase/auth';
-import './LocalCircle.css';
 
+// Chat Dialog Component
+const ChatDialog = ({ open, handleClose, neighbor }) => {
+  const [message, setMessage] = useState('');
+  const [chatHistory, setChatHistory] = useState([]);
+
+  const handleSend = () => {
+    if (message.trim()) {
+      const newMessage = {
+        text: message,
+        timestamp: new Date().toLocaleTimeString(),
+        sender: 'user'
+      };
+      
+      setChatHistory([...chatHistory, newMessage]);
+      setMessage('');
+
+      // Simulate response after 1 second
+      setTimeout(() => {
+        const response = {
+          text: `Hi! Thanks for reaching out. I'd be happy to connect!`,
+          timestamp: new Date().toLocaleTimeString(),
+          sender: 'neighbor'
+        };
+        setChatHistory(prev => [...prev, response]);
+      }, 1000);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <Dialog 
+      open={open} 
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle sx={{ 
+        bgcolor: 'primary.main', 
+        color: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Avatar>{neighbor?.name[0]}</Avatar>
+          <Typography>{neighbor?.name}</Typography>
+        </Box>
+        <IconButton onClick={handleClose} sx={{ color: 'white' }}>
+          <Close />
+        </IconButton>
+      </DialogTitle>
+
+      <DialogContent sx={{ height: '400px', p: 2 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: 2,
+          height: '100%',
+          overflowY: 'auto'
+        }}>
+          {chatHistory.map((chat, index) => (
+            <Box
+              key={index}
+              sx={{
+                display: 'flex',
+                justifyContent: chat.sender === 'user' ? 'flex-end' : 'flex-start',
+                mb: 1
+              }}
+            >
+              <Paper
+                elevation={1}
+                sx={{
+                  p: 1,
+                  maxWidth: '70%',
+                  bgcolor: chat.sender === 'user' ? 'primary.main' : 'grey.100',
+                  color: chat.sender === 'user' ? 'white' : 'text.primary',
+                  borderRadius: 2
+                }}
+              >
+                <Typography variant="body1">{chat.text}</Typography>
+                <Typography variant="caption" sx={{ display: 'block', mt: 0.5, opacity: 0.7 }}>
+                  {chat.timestamp}
+                </Typography>
+              </Paper>
+            </Box>
+          ))}
+        </Box>
+      </DialogContent>
+
+      <DialogActions sx={{ p: 2, bgcolor: 'grey.100' }}>
+        <TextField
+          fullWidth
+          multiline
+          maxRows={4}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder="Type your message..."
+          variant="outlined"
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton 
+                  onClick={handleSend}
+                  color="primary"
+                  disabled={!message.trim()}
+                >
+                  <Send />
+                </IconButton>
+              </InputAdornment>
+            )
+          }}
+        />
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// Main LocalCircle Component
 const LocalCircle = () => {
   const [activeTab, setActiveTab] = useState('community');
   const [userLocation, setUserLocation] = useState(null);
@@ -45,12 +173,38 @@ const LocalCircle = () => {
   const [events, setEvents] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [businesses, setBusinesses] = useState([]);
-  const [user, setUser] = useState(null);
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [showWelcomeMessage, setShowWelcomeMessage] = useState(false);
-  const [welcomeMessageShown, setWelcomeMessageShown] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [selectedNeighbor, setSelectedNeighbor] = useState(null);
 
-  // Mock data setup
+  const handleChatOpen = (neighbor) => {
+    setSelectedNeighbor(neighbor);
+    setChatOpen(true);
+  };
+
+  const handleChatClose = () => {
+    setChatOpen(false);
+    setSelectedNeighbor(null);
+  };
+
+  // Mock data
+  const mockNeighbors = [
+    { id: 1, name: 'Sarah Chen', distance: '0.3 miles', skills: ['Gardening', 'Piano Teaching'] },
+    { id: 2, name: 'Mike Johnson', distance: '0.5 miles', skills: ['Home Repair', 'Programming'] },
+    { id: 3, name: 'Lisa Wong', distance: '0.8 miles', skills: ['Cooking', 'Painting'] },
+  ];
+
+  const mockMarketplace = [
+    { id: 1, type: 'tool', name: 'Power Drill', owner: 'James', distance: '0.2 miles', rate: 'Free' },
+    { id: 2, type: 'skill', name: 'Math Tutoring', owner: 'Emma', distance: '0.4 miles', rate: '$20/hr' },
+    { id: 3, type: 'item', name: 'Camping Tent', owner: 'David', distance: '0.6 miles', rate: '$10/day' },
+  ];
+
+  const mockEvents = [
+    { id: 1, name: 'Community Garden Day', date: '2024-02-15', location: 'Central Park', attendees: 12 },
+    { id: 2, name: 'Block Party', date: '2024-02-20', location: 'Main Street', attendees: 45 },
+    { id: 3, name: 'Skill Share Workshop', date: '2024-02-25', location: 'Community Center', attendees: 8 },
+  ];
+
   const mockAlerts = [
     { 
       id: 1, 
@@ -114,26 +268,6 @@ const LocalCircle = () => {
     }
   ];
 
-  // Your existing mock data...
-  const mockNeighbors = [
-    { id: 1, name: 'Sarah Chen', distance: '0.3 miles', skills: ['Gardening', 'Piano Teaching'] },
-    { id: 2, name: 'Mike Johnson', distance: '0.5 miles', skills: ['Home Repair', 'Programming'] },
-    { id: 3, name: 'Lisa Wong', distance: '0.8 miles', skills: ['Cooking', 'Painting'] },
-  ];
-
-  const mockMarketplace = [
-    { id: 1, type: 'tool', name: 'Power Drill', owner: 'James', distance: '0.2 miles', rate: 'Free' },
-    { id: 2, type: 'skill', name: 'Math Tutoring', owner: 'Emma', distance: '0.4 miles', rate: '$20/hr' },
-    { id: 3, type: 'item', name: 'Camping Tent', owner: 'David', distance: '0.6 miles', rate: '$10/day' },
-  ];
-
-  const mockEvents = [
-    { id: 1, name: 'Community Garden Day', date: '2024-02-15', location: 'Central Park', attendees: 12 },
-    { id: 2, name: 'Block Party', date: '2024-02-20', location: 'Main Street', attendees: 45 },
-    { id: 3, name: 'Skill Share Workshop', date: '2024-02-25', location: 'Community Center', attendees: 8 },
-  ];
-
-  // Location verification
   const verifyLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -158,55 +292,11 @@ const LocalCircle = () => {
     setAlerts(mockAlerts);
     setBusinesses(mockBusinesses);
   }, []);
-  useEffect(() => {
-    if (user && !welcomeMessageShown) {
-      setShowWelcomeMessage(true);
-      setWelcomeMessageShown(true); // Mark the message as shown
-  
-      const timer = setTimeout(() => {
-        setShowWelcomeMessage(false); // Hide the message after 3 seconds
-      }, 3000);
-  
-      return () => clearTimeout(timer); // Cleanup the timer
-    }
-  }, [user]); // Only depend on `user`, not `welcomeMessageShown`
 
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
   };
-  const handleGoogleSignIn = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const signedInUser = result.user;
-      setUser({
-        name: signedInUser.displayName,
-        email: signedInUser.email,
-        photo: signedInUser.photoURL,
-      });
-      setActiveTab('community'); // Redirect to the main page after login
-      console.log('User signed in:', signedInUser);
-    } catch (error) {
-      console.error('Error during Google sign-in:', error);
-    }
-  };
-  const handleLogout = async () => {
-    try {
-      await signOut(auth); // Sign out the user
-      setUser(null); // Clear the user state
-      setWelcomeMessageShown(false); // Reset the welcome message state
-      setActiveTab('login'); // Redirect to the login tab
-    } catch (error) {
-      console.error('Error during logout:', error);
-    }
-  };
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
 
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-  
   const getSeverityIcon = (severity) => {
     switch (severity) {
       case 'error':
@@ -222,28 +312,7 @@ const LocalCircle = () => {
 
   return (
     <Box sx={{ bgcolor: '#f5f5f5', minHeight: '100vh', py: 4 }}>
-    <Container maxWidth="lg">
-      {/* Welcome message */}
-      {user && showWelcomeMessage && (
- <Box
- sx={{
-   position: 'fixed',
-   top: 0,
-   left: 0,
-   width: '100%',
-   backgroundColor: '#cce7ff', // Lightish blue
-   color: '#333', // Darker text for contrast
-   textAlign: 'center',
-   py: 2,
-   zIndex: 1300,
-   animation: 'fadeIn 0.3s ease-in, fadeOut 0.5s ease-out 3s', // Appears in 0.3s, fades out in 0.5s, disappears in 3s
- }}
->
- <Typography variant="h6" component="div">
-   Welcome, {user.name}!
- </Typography>
-</Box>
-      )}
+      <Container maxWidth="lg">
         {/* Location Alert */}
         {!userLocation && (
           <Alert 
@@ -258,7 +327,6 @@ const LocalCircle = () => {
             Please enable location services to connect with your community
           </Alert>
         )}
-        
 
         {/* Navigation Tabs */}
         <Paper sx={{ mb: 4 }}>
@@ -282,26 +350,11 @@ const LocalCircle = () => {
               value="alerts" 
             />
             <Tab icon={<BusinessCenter />} label="Local Business" value="businesses" />
-            <Box sx={{ flexGrow: 1 }} /> {/* This pushes the Login tab to the end */}
-            {/* Conditional rendering for Login/Logout */}
-    {user ? (
-      <Tab 
-        icon={<Person />} 
-        label="Logout" 
-        onClick={handleLogout} // Call handleLogout when clicked
-      />
-    ) : (
-      <Tab 
-        icon={<Person />} 
-        label="Login" 
-        value="login" 
-      />
-    )}
-  </Tabs>
-  </Paper>
+          </Tabs>
+        </Paper>
+
         {/* Main Content */}
         <Grid container spacing={3}>
-          {/* Existing sections... */}
           {/* Neighbors Section */}
           {activeTab === 'community' && neighbors.map((neighbor) => (
             <Grid item xs={12} sm={6} md={4} key={neighbor.id}>
@@ -324,7 +377,11 @@ const LocalCircle = () => {
                   </Box>
                 </CardContent>
                 <CardActions>
-                  <Button variant="contained" fullWidth>
+                  <Button 
+                    variant="contained" 
+                    fullWidth
+                    onClick={() => handleChatOpen(neighbor)}
+                  >
                     Connect
                   </Button>
                 </CardActions>
@@ -411,7 +468,11 @@ const LocalCircle = () => {
                   </Typography>
                 </CardContent>
                 <CardActions>
-                  <Button variant="contained" fullWidth color={alert.severity}>
+                  <Button 
+                    variant="contained" 
+                    fullWidth 
+                    color={alert.severity}
+                  >
                     View Details
                   </Button>
                 </CardActions>
@@ -476,32 +537,14 @@ const LocalCircle = () => {
               </Card>
             </Grid>
           ))}
-          {/* Login Page */}
-          {activeTab === 'login' && (
-  <Paper elevation={3} sx={{ p: 4, mx: 'auto', maxWidth: 400 }}>
-    <Typography variant="h5" gutterBottom>
-      Login
-    </Typography>
-    <TextField fullWidth label="Email" margin="normal" type="email" />
-    <TextField fullWidth label="Password" margin="normal" type="password" />
-    <Button variant="contained" fullWidth sx={{ mt: 2 }}>
-      Submit
-    </Button>
-    <Typography variant="body1" align="center" sx={{ my: 2 }}>
-      Or
-    </Typography>
-    <Button
-      variant="outlined"
-      fullWidth
-      sx={{ mt: 2 }}
-      onClick={handleGoogleSignIn}
-    >
-      Sign in with Google
-    </Button>
-  </Paper>
-)}
-
         </Grid>
+
+        {/* Chat Dialog */}
+        <ChatDialog 
+          open={chatOpen}
+          handleClose={handleChatClose}
+          neighbor={selectedNeighbor}
+        />
       </Container>
     </Box>
   );
