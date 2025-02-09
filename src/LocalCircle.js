@@ -13,7 +13,14 @@ import {
   Box,
   Alert,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
   IconButton,
+  Avatar,
+  InputAdornment,
   Badge
 } from '@mui/material';
 import {
@@ -28,9 +35,136 @@ import {
   Star,
   Warning,
   Info,
-  ErrorOutline
+  ErrorOutline,
+  Close,
+  Send
 } from '@mui/icons-material';
 
+// Chat Dialog Component
+const ChatDialog = ({ open, handleClose, neighbor }) => {
+  const [message, setMessage] = useState('');
+  const [chatHistory, setChatHistory] = useState([]);
+
+  const handleSend = () => {
+    if (message.trim()) {
+      const newMessage = {
+        text: message,
+        timestamp: new Date().toLocaleTimeString(),
+        sender: 'user'
+      };
+      
+      setChatHistory([...chatHistory, newMessage]);
+      setMessage('');
+
+      // Simulate response after 1 second
+      setTimeout(() => {
+        const response = {
+          text: `Hi! Thanks for reaching out. I'd be happy to connect!`,
+          timestamp: new Date().toLocaleTimeString(),
+          sender: 'neighbor'
+        };
+        setChatHistory(prev => [...prev, response]);
+      }, 1000);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <Dialog 
+      open={open} 
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogTitle sx={{ 
+        bgcolor: 'primary.main', 
+        color: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Avatar>{neighbor?.name[0]}</Avatar>
+          <Typography>{neighbor?.name}</Typography>
+        </Box>
+        <IconButton onClick={handleClose} sx={{ color: 'white' }}>
+          <Close />
+        </IconButton>
+      </DialogTitle>
+
+      <DialogContent sx={{ height: '400px', p: 2 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: 2,
+          height: '100%',
+          overflowY: 'auto'
+        }}>
+          {chatHistory.map((chat, index) => (
+            <Box
+              key={index}
+              sx={{
+                display: 'flex',
+                justifyContent: chat.sender === 'user' ? 'flex-end' : 'flex-start',
+                mb: 1
+              }}
+            >
+              <Paper
+                elevation={1}
+                sx={{
+                  p: 1,
+                  maxWidth: '70%',
+                  bgcolor: chat.sender === 'user' ? 'primary.main' : 'grey.100',
+                  color: chat.sender === 'user' ? 'white' : 'text.primary',
+                  borderRadius: 2
+                }}
+              >
+                <Typography variant="body1">{chat.text}</Typography>
+                <Typography variant="caption" sx={{ display: 'block', mt: 0.5, opacity: 0.7 }}>
+                  {chat.timestamp}
+                </Typography>
+              </Paper>
+            </Box>
+          ))}
+        </Box>
+      </DialogContent>
+
+      <DialogActions sx={{ p: 2, bgcolor: 'grey.100' }}>
+        <TextField
+          fullWidth
+          multiline
+          maxRows={4}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder="Type your message..."
+          variant="outlined"
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton 
+                  onClick={handleSend}
+                  color="primary"
+                  disabled={!message.trim()}
+                >
+                  <Send />
+                </IconButton>
+              </InputAdornment>
+            )
+          }}
+        />
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// Main LocalCircle Component
 const LocalCircle = () => {
   const [activeTab, setActiveTab] = useState('community');
   const [userLocation, setUserLocation] = useState(null);
@@ -39,8 +173,38 @@ const LocalCircle = () => {
   const [events, setEvents] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [businesses, setBusinesses] = useState([]);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [selectedNeighbor, setSelectedNeighbor] = useState(null);
 
-  // Mock data setup
+  const handleChatOpen = (neighbor) => {
+    setSelectedNeighbor(neighbor);
+    setChatOpen(true);
+  };
+
+  const handleChatClose = () => {
+    setChatOpen(false);
+    setSelectedNeighbor(null);
+  };
+
+  // Mock data
+  const mockNeighbors = [
+    { id: 1, name: 'Sarah Chen', distance: '0.3 miles', skills: ['Gardening', 'Piano Teaching'] },
+    { id: 2, name: 'Mike Johnson', distance: '0.5 miles', skills: ['Home Repair', 'Programming'] },
+    { id: 3, name: 'Lisa Wong', distance: '0.8 miles', skills: ['Cooking', 'Painting'] },
+  ];
+
+  const mockMarketplace = [
+    { id: 1, type: 'tool', name: 'Power Drill', owner: 'James', distance: '0.2 miles', rate: 'Free' },
+    { id: 2, type: 'skill', name: 'Math Tutoring', owner: 'Emma', distance: '0.4 miles', rate: '$20/hr' },
+    { id: 3, type: 'item', name: 'Camping Tent', owner: 'David', distance: '0.6 miles', rate: '$10/day' },
+  ];
+
+  const mockEvents = [
+    { id: 1, name: 'Community Garden Day', date: '2024-02-15', location: 'Central Park', attendees: 12 },
+    { id: 2, name: 'Block Party', date: '2024-02-20', location: 'Main Street', attendees: 45 },
+    { id: 3, name: 'Skill Share Workshop', date: '2024-02-25', location: 'Community Center', attendees: 8 },
+  ];
+
   const mockAlerts = [
     { 
       id: 1, 
@@ -104,26 +268,6 @@ const LocalCircle = () => {
     }
   ];
 
-  // Your existing mock data...
-  const mockNeighbors = [
-    { id: 1, name: 'Sarah Chen', distance: '0.3 miles', skills: ['Gardening', 'Piano Teaching'] },
-    { id: 2, name: 'Mike Johnson', distance: '0.5 miles', skills: ['Home Repair', 'Programming'] },
-    { id: 3, name: 'Lisa Wong', distance: '0.8 miles', skills: ['Cooking', 'Painting'] },
-  ];
-
-  const mockMarketplace = [
-    { id: 1, type: 'tool', name: 'Power Drill', owner: 'James', distance: '0.2 miles', rate: 'Free' },
-    { id: 2, type: 'skill', name: 'Math Tutoring', owner: 'Emma', distance: '0.4 miles', rate: '$20/hr' },
-    { id: 3, type: 'item', name: 'Camping Tent', owner: 'David', distance: '0.6 miles', rate: '$10/day' },
-  ];
-
-  const mockEvents = [
-    { id: 1, name: 'Community Garden Day', date: '2024-02-15', location: 'Central Park', attendees: 12 },
-    { id: 2, name: 'Block Party', date: '2024-02-20', location: 'Main Street', attendees: 45 },
-    { id: 3, name: 'Skill Share Workshop', date: '2024-02-25', location: 'Community Center', attendees: 8 },
-  ];
-
-  // Location verification
   const verifyLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -211,7 +355,6 @@ const LocalCircle = () => {
 
         {/* Main Content */}
         <Grid container spacing={3}>
-          {/* Existing sections... */}
           {/* Neighbors Section */}
           {activeTab === 'community' && neighbors.map((neighbor) => (
             <Grid item xs={12} sm={6} md={4} key={neighbor.id}>
@@ -234,7 +377,11 @@ const LocalCircle = () => {
                   </Box>
                 </CardContent>
                 <CardActions>
-                  <Button variant="contained" fullWidth>
+                  <Button 
+                    variant="contained" 
+                    fullWidth
+                    onClick={() => handleChatOpen(neighbor)}
+                  >
                     Connect
                   </Button>
                 </CardActions>
@@ -321,7 +468,11 @@ const LocalCircle = () => {
                   </Typography>
                 </CardContent>
                 <CardActions>
-                  <Button variant="contained" fullWidth color={alert.severity}>
+                  <Button 
+                    variant="contained" 
+                    fullWidth 
+                    color={alert.severity}
+                  >
                     View Details
                   </Button>
                 </CardActions>
@@ -387,6 +538,13 @@ const LocalCircle = () => {
             </Grid>
           ))}
         </Grid>
+
+        {/* Chat Dialog */}
+        <ChatDialog 
+          open={chatOpen}
+          handleClose={handleChatClose}
+          neighbor={selectedNeighbor}
+        />
       </Container>
     </Box>
   );

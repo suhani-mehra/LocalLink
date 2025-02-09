@@ -1,9 +1,10 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import LocalCircle from './LocalCircle';
+import SignUp from './SignUp';
 
-// Create a theme instance
 const theme = createTheme({
   palette: {
     primary: {
@@ -19,7 +20,13 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <LocalCircle />
+      <Router>
+        <Routes>
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/app" element={<LocalCircle />} />
+          <Route path="/" element={<Navigate to="/signup" replace />} />
+        </Routes>
+      </Router>
     </ThemeProvider>
   );
 }
