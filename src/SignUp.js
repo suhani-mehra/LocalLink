@@ -121,7 +121,7 @@ const SignUp = () => {
     setLoading(true);
     try {
       const userId = formData.email; // Use email as a unique identifier for each user
-
+  
       // Prepare the user data to store in Firestore
       const userData = {
         ...formData,
@@ -129,12 +129,15 @@ const SignUp = () => {
         idDocument,
         createdAt: new Date().toISOString() // Timestamp for when the data was created
       };
-
+  
       // Save data to Firestore
       await setDoc(doc(db, 'users', userId), userData);
-
+  
+      // Save user information in localStorage for authentication
+      localStorage.setItem('user', JSON.stringify({ email: formData.email }));
+  
       console.log('User profile saved successfully:', userData);
-
+  
       // Navigate to the main app or success page
       navigate('/app');
     } catch (err) {
